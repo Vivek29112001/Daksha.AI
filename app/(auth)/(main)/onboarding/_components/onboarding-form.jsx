@@ -21,10 +21,18 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea"; // ✅ Import the missing component
+import useFetch from "@/hooks/use-fetch";
+import { updateUser } from "@/actions/user";
 
 const OnboardingForm = ({ industries }) => {
   const [selectedIndustry, setselectedIndustry] = useState(null);
   const router = useRouter();
+
+  const { 
+    loading: updateLoading,
+    fn: updateUserFn,
+    data: updateResult,
+  } = useFetch(updateUser)
 
   const {
     register,
@@ -36,7 +44,20 @@ const OnboardingForm = ({ industries }) => {
     resolver: zodResolver(onboardingSchema),
   });
 
-  const onSubmit = async (values) => { }
+  const onSubmit = async (values) => {
+    try{
+      const formattedIndustry = `${values.industry}-${values.subIndustry
+        .toLowerCase()
+        .replace(/ /g, "-")}`;
+
+        await updateUserFn({
+          ...values,
+          industry: formattedIndustry,
+        })
+    }catch(error){
+      console.error("Onboarding error: ", error);
+    }
+   };
 
   const watchIndustry = watch("industry");
 
