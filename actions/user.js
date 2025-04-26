@@ -1,7 +1,8 @@
 "use server";
 import { db } from "@/lib/prisma";
-import { industries } from "@/data/industries";
 import { auth } from "@clerk/nextjs/server";
+import { generateAIInsights } from "./dashboard";
+import { revalidatePath } from "next/cache";
 
 export async function updateUser(data) {
     const { userId } = await auth();
@@ -25,16 +26,12 @@ export async function updateUser(data) {
 
             // if the industry does't exist , creat it with default value - will replace it will ai later
             if (!industryInsight) {
-                industryInsight = await tx.industryInsight.create({
+                const insights = await generateAIInsights(data.industry);
+
+                industryInsight = await db.industryInsight.create({
                     data: {
                         industry: data.industry,
-                        salaryRange: [],
-                        growthRate: 0,
-                        demandLevel: "Medium",
-                        topSkills: [],
-                        marketOutLook: "Neutral",
-                        keyTrends: [],
-                        recommendedSkills: [],
+                        ...insights,
                         nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
                     },
                 })
@@ -42,7 +39,7 @@ export async function updateUser(data) {
 
 
             //update the user
-            const updatedUser = await tx.user.Update({
+            const updatedUser = await tx.user.update({
                 where: {
                     id: user.id,
                 },
@@ -57,10 +54,11 @@ export async function updateUser(data) {
         }, {
             timeout: 10000, //default 5000
         })
+        // revalidatePath("/")
         return result.user;
     } catch (error) {
         console.log("Error updating user and industry: ", error.message);
-        throw new Error("Failed to update profile");
+        throw new Error("Failed to update profile" + error.message);
     }
 }
 
@@ -76,19 +74,19 @@ export async function getUserOnBoardingStatus() {
     })
     if (!userId) throw new Error("User not found");
 
-    try{
+    try {
         const user = await db.user.findUnique({
-            where:{
+            where: {
                 clerkUserId: userId,
             },
-            select:{
+            select: {
                 industry: true,
             }
         });
         return {
-            isOnboarded : !!user?.industry
+            isOnboarded: !!user?.industry
         }
-    }catch(error){
+    } catch (error) {
         console.error("Error checking onboarding status:", error.message);
         throw new Error("Failed to check onBoarding status");
     }

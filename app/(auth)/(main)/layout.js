@@ -6,7 +6,7 @@ const Mainlayout = ({children}) => {
 
 
   return (
-    <div className='container mx-auto mt-24 mb-20'>
+    <div className='container mx-auto mt-14 mb-20'>
       {children}
     </div>
   )
