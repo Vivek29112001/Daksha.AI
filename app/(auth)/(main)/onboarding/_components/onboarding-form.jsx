@@ -2,7 +2,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { onboardingSchema } from "@/app/lib/schema";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -23,12 +23,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea"; // ✅ Import the missing component
 import useFetch from "@/hooks/use-fetch";
 import { updateUser } from "@/actions/user";
+import { Loader2 } from "lucide-react";
 
 const OnboardingForm = ({ industries }) => {
   const [selectedIndustry, setselectedIndustry] = useState(null);
   const router = useRouter();
 
-  const { 
+  const {
     loading: updateLoading,
     fn: updateUserFn,
     data: updateResult,
@@ -45,19 +46,27 @@ const OnboardingForm = ({ industries }) => {
   });
 
   const onSubmit = async (values) => {
-    try{
+    try {
       const formattedIndustry = `${values.industry}-${values.subIndustry
         .toLowerCase()
         .replace(/ /g, "-")}`;
 
-        await updateUserFn({
-          ...values,
-          industry: formattedIndustry,
-        })
-    }catch(error){
+      await updateUserFn({
+        ...values,
+        industry: formattedIndustry,
+      })
+    } catch (error) {
       console.error("Onboarding error: ", error);
     }
-   };
+  };
+
+  useEffect(() => {
+    if (updateResult?.success && !updateLoading) {
+      toast.success("Profile updated successfully!");
+      router.push("/dashboard")
+      router.refresh()
+    }
+  }, [updateResult, updateLoading])
 
   const watchIndustry = watch("industry");
 
@@ -166,7 +175,13 @@ const OnboardingForm = ({ industries }) => {
             </div>
 
             <button type="submit" className="bg-blue-500 text-white p-2 rounded">
-              Submit
+              {updateLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                </>
+              ) : (
+                "Complete Profile"
+              )}
             </button>
           </form>
         </CardContent>
