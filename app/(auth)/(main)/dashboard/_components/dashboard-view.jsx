@@ -1,23 +1,34 @@
 "use client"
-import { LineChart, TrendingDown, TrendingUp } from 'lucide-react';
+import { Brain, BriefcaseIcon, LineChart, TrendingDown, TrendingUp } from 'lucide-react';
 import React from 'react'
 import { format, formatDistanceToNow } from 'date-fns';
 import { Badge } from "@/components/ui/badge";
 import {
     Card,
     CardContent,
+    CardDescription,
     CardHeader,
     CardTitle,
-  } from "@/components/ui/card"
-  
+} from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress";
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+} from "recharts";
+
 
 const dashboardView = ({ insights }) => {
     const salaryData = insights.salaryRanges.map((range) => ({
         name: range.role,
         min: range.min / 1000,
-        max: range.mix / 1000,
-        median: range.median / 1000
-    }))
+        max: range.max / 1000,
+        median: range.median / 1000,
+    }));
 
     const getDemandLevelColor = (level) => {
         switch (level.toLowerCase()) {
@@ -65,7 +76,7 @@ const dashboardView = ({ insights }) => {
                 <Card>
                     <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                         <CardTitle className="text-sm font-medium">Market Outlook</CardTitle>
-                        <OutlookIcon className={`h-4 w-4 ${OutlookColor}`}/>
+                        <OutlookIcon className={`h-4 w-4 ${OutlookColor}`} />
                     </CardHeader>
                     <CardContent>
                         <div className='text-2xl font-bold'>{insights.marketOutlook}</div>
@@ -75,7 +86,92 @@ const dashboardView = ({ insights }) => {
                     </CardContent>
                 </Card>
 
+
+                <Card>
+                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                        <CardTitle className="text-sm font-medium">Industry Growth</CardTitle>
+                        <TrendingUp className={`h-4 w-4 ${OutlookColor}`} />
+                    </CardHeader>
+                    <CardContent>
+                        <div className='text-2xl font-bold'>{insights.growthRate.toFixed(1)}%</div>
+                        <Progress value={insights.growthRate} className="mt-2" />
+                    </CardContent>
+                </Card>
+
+
+                <Card>
+                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                        <CardTitle className="text-sm font-medium">Demand level</CardTitle>
+                        <BriefcaseIcon className={`h-4 w-4 ${OutlookColor}`} />
+                    </CardHeader>
+                    <CardContent>
+                        <div className='text-2xl font-bold'>{insights.demandLevel}</div>
+                        <div
+                            className={`h-2 w-full rounded-full mt-2 ${getDemandLevelColor(insights.demandLevel)}`}
+                        />
+                        <Progress value={insights.demandLevel} className="mt-2 " />
+                    </CardContent>
+                </Card>
+
+
+                <Card>
+                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                        <CardTitle className="text-sm font-medium">Top Skills</CardTitle>
+                        <Brain className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className='flex flex-wrap gap-1'>
+                            {insights.topSkills.map((skill) => (
+                                <Badge key={skill} variant="secondary">
+                                    {skill}
+                                </Badge>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
             </div>
+            <Card>
+                <CardHeader >
+                    <CardTitle >Salary Ranges by Role</CardTitle>
+                    <CardDescription>
+                        Display minimum, medium and maximum salaries (in thousands)
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className='h-[400px] '>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                                data={salaryData}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            return (
+                                                <div className="bg-background border rounded-lg p-2 shadow-md">
+                                                    <p className="font-medium">{label}</p>
+                                                    {payload.map((item) => (
+                                                        <p key={item.name} className="text-sm">
+                                                            {item.name}: ${item.value}K
+                                                        </p>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
+                                <Bar dataKey="min" fill="#94a3b8" name="Min Salary (K)" />
+                                <Bar dataKey="median" fill="#64748b" name="Median Salary (K)" />
+                                <Bar dataKey="max" fill="#475569" name="Max Salary (K)" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </CardContent>
+            </Card>
 
         </div>
     )
