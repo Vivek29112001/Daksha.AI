@@ -14,6 +14,8 @@ import {
 import { BarLoader } from "react-spinners";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import QuizResult from "./quizresult";
 
 function Quiz() {
     const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -26,17 +28,74 @@ function Quiz() {
         data: quizData
     } = useFetch(generateQuiz);
 
+    const {
+        loading: savingResult,
+        fn: saveQuizResultFn,
+        data: resultData,
+        setData: setResultData,
+    } = useFetch(saveQuizResult);
+    console.log("resultData", resultData)
+
     useEffect(() => {
         if (quizData) {
             setAnswers(new Array(quizData.length).fill(null));
         }
     }, [quizData]);
 
-    // Fixed: check the loading flag instead of the generateQuiz function.
+    const handleAnswer = (answer) => {
+        const newAnswers = [...answers];
+        newAnswers[currentQuestion] = answer;
+        setAnswers(newAnswers);
+    };
+
+    const handleNext = () => {
+       if (currentQuestion < quizData.length - 1) {
+           setCurrentQuestion(currentQuestion + 1);
+           setShowExplanation(false);
+       } else {
+           finishQuiz();
+       }
+    };
+
+    const calculateeScore = () => {
+        let correct = 0;
+        answers.forEach((answer, index) => {
+            if (answer === quizData[index].correctAnswer) {
+                correct++;
+            }
+        });
+        return (correct / quizData.length) * 100;
+    };
+
+    const finishQuiz = async () => {
+        const score = calculateeScore();
+        try {
+            await saveQuizResultFn(quizData, answers, score);
+            toast.success("Quiz completed!");
+        } catch (error) {
+            toast.error(error.message || "Error failed to saving quiz result");
+        }
+    };
+
+    const startNewQuiz = () => {
+        setCurrentQuestion(0);
+        setAnswers([]);
+        setShowExplanation(false);
+        generateQuizFn();
+        setResultData(null);
+    };
+
+    // Show loader while quiz is generating.
     if (generatingQuiz) {
         return <BarLoader className='mt-4' width={"100%"} color='gray' />;
     }
-
+    if (resultData) {
+        return (
+            <div className='mx-2'>
+                <QuizResult result={resultData} onStartNew={startNewQuiz} />
+            </div>
+        );
+    }
     if (!quizData) {
         return (
             <Card className="mx-2">
@@ -69,7 +128,11 @@ function Quiz() {
             </CardHeader>
             <CardContent className="space-y-4">
                 <p className="text-lg font-medium">{question.question}</p>
-                <RadioGroup className="space-y-2">
+                <RadioGroup
+                    className="space-y-2"
+                    onValueChange={handleAnswer}
+                    value={answers[currentQuestion] || ""}
+                >
                     {question.options.map((option, index) => {
                         return (
                             <div className="flex items-center space-x-2" key={index}>
@@ -79,9 +142,33 @@ function Quiz() {
                         );
                     })}
                 </RadioGroup>
+                {showExplanation &&
+                    <div className='mt-4 p-4 bg-muted rounded-lg'>
+                        <p className='font-medium'> Explanation:</p>
+                        <p className='text-muted-foreground'>{question.explanation}</p>
+                    </div>}
             </CardContent>
             <CardFooter className="flex justify-between">
-                {/* You can add next/previous buttons or other controls here */}
+                {!showExplanation && (
+                    <Button
+                        onClick={() => setShowExplanation(true)}
+                        variant="outline"
+                        disabled={!answers[currentQuestion]}
+                    >
+                        Show Explanation
+                    </Button>
+                )}
+                <Button
+                    onClick={handleNext}
+                    disabled={!answers[currentQuestion] || savingResult}
+                    className="ml-auto"
+                >
+                    {savingResult ? (
+                        <BarLoader className="mt-4" width={"100%"} color="gray" />
+                    ) : currentQuestion < quizData.length - 1
+                        ? "Next Question"
+                        : "Finish Quiz"}
+                </Button>
             </CardFooter>
         </Card>
     );
